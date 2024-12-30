@@ -18,6 +18,19 @@ type Comment = {
   isLiked: boolean;
 };
 
+type PostData = {
+  id: string;
+  image: string;
+  user: string;
+  description: string;
+  likes: number;
+  comments: Comment[];
+  music: string;
+  liked: boolean;
+  favorited: boolean;
+  isFollowed: boolean;
+};
+
 const SAMPLE_POSTS = [
   {
     id: '1',
@@ -46,7 +59,7 @@ const SAMPLE_POSTS = [
     user: '@user2',
     description: 'Another cool video 🔥 #fun #viral',
     likes: 89100,
-    comments: '912',
+    comments: [],
     music: 'Popular Song - Artist',
     liked: false,
     favorited: false
@@ -298,19 +311,24 @@ export default function HomeScreen() {
 
   const handleCommentLike = (commentId: string) => {
     setPosts(currentPosts => 
-      currentPosts.map(post => ({
-        ...post,
-        comments: post.comments.map(comment => {
-          if (comment.id === commentId) {
-            return {
-              ...comment,
-              isLiked: !comment.isLiked,
-              likes: comment.isLiked ? comment.likes - 1 : comment.likes + 1
-            };
-          }
-          return comment;
-        })
-      }))
+      currentPosts.map(post => {
+        if (post.id === activePostId && Array.isArray(post.comments)) {
+          return {
+            ...post,
+            comments: post.comments.map(comment => {
+              if (comment.id === commentId) {
+                return {
+                  ...comment,
+                  isLiked: !comment.isLiked,
+                  likes: comment.isLiked ? comment.likes - 1 : comment.likes + 1
+                };
+              }
+              return comment;
+            })
+          };
+        }
+        return post;
+      })
     );
   };
 
@@ -498,7 +516,10 @@ export default function HomeScreen() {
       <CommentsModal
         visible={commentModalVisible}
         onClose={() => setCommentModalVisible(false)}
-        comments={activePostId ? posts.find(p => p.id === activePostId)?.comments || [] : []}
+        comments={activePostId ? 
+          (posts.find(p => p.id === activePostId)?.comments || [])
+          : []
+        }
         onAddComment={handleAddComment}
         onLikeComment={handleCommentLike}
       />

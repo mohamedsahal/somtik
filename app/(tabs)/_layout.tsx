@@ -1,6 +1,7 @@
 import { Tabs } from 'expo-router';
 import { View, StyleSheet } from 'react-native';
 import { IconSymbol } from '@/components/ui/IconSymbol';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 function CustomPlusIcon({ color }: { color: string }) {
   return (
@@ -13,6 +14,8 @@ function CustomPlusIcon({ color }: { color: string }) {
 }
 
 export default function TabLayout() {
+  const insets = useSafeAreaInsets();
+
   return (
     <Tabs
       screenOptions={{
@@ -20,46 +23,57 @@ export default function TabLayout() {
         tabBarStyle: {
           backgroundColor: '#000',
           borderTopWidth: 0,
+          height: 49 + insets.bottom,
+          paddingBottom: insets.bottom,
         },
         tabBarActiveTintColor: '#fff',
         tabBarInactiveTintColor: '#888',
-        tabBarShowLabel: false,
+        tabBarShowLabel: true,
+        tabBarLabelStyle: {
+          fontSize: 10,
+          marginTop: -4,
+        },
       }}>
       <Tabs.Screen
         name="index"
         options={{
+          tabBarLabel: 'For You',
           tabBarIcon: ({ color }) => (
-            <IconSymbol name="house.fill" size={25} color={color} />
+            <IconSymbol name="house.fill" size={24} color={color} />
           ),
         }}
       />
       <Tabs.Screen
         name="friends"
         options={{
+          tabBarLabel: 'Following',
           tabBarIcon: ({ color }) => (
-            <IconSymbol name="person.2.fill" size={25} color={color} />
+            <IconSymbol name="person.2.fill" size={24} color={color} />
           ),
         }}
       />
       <Tabs.Screen
         name="create"
         options={{
+          tabBarLabel: '',
           tabBarIcon: ({ color }) => <CustomPlusIcon color={color} />,
         }}
       />
       <Tabs.Screen
         name="inbox"
         options={{
+          tabBarLabel: 'Inbox',
           tabBarIcon: ({ color }) => (
-            <IconSymbol name="envelope.fill" size={25} color={color} />
+            <IconSymbol name="envelope.fill" size={24} color={color} />
           ),
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
+          tabBarLabel: 'Profile',
           tabBarIcon: ({ color }) => (
-            <IconSymbol name="person.fill" size={25} color={color} />
+            <IconSymbol name="person.fill" size={24} color={color} />
           ),
         }}
       />
