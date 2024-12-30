@@ -9,10 +9,10 @@ const MAPPING = {
   'house.fill': 'home',
   'person.2.fill': 'group',
   'plus': 'add',
-  'envelope.fill': 'mail',
+  'envelope.fill': 'chat',
   'person.fill': 'person',
   'heart.fill': 'favorite',
-  'message.fill': 'chat-bubble',
+  'message.fill': 'forum',
   'broadcast.fill': 'live-tv',
   'chevron.left': 'chevron-left',
   'play.fill': 'play-arrow',
@@ -23,6 +23,9 @@ const MAPPING = {
   'camera.fill': 'camera',
   'photo.fill': 'photo',
   'arrowshape.turn.up.right.fill': 'reply',
+  'chat.bubble.fill': 'mail',
+  'trophy.fill': 'emoji-events',
+  'checkmark.seal.fill': 'verified',
 } as const;
 
 export type IconSymbolName = keyof typeof MAPPING;

@@ -6,6 +6,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { CommentsModal, Comment } from '@/components/CommentsModal';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, FontAwesome5, MaterialIcons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 
 const { height, width } = Dimensions.get('window');
 
@@ -253,6 +254,7 @@ export default function HomeScreen() {
   const [activeTab, setActiveTab] = useState('for-you');
   const [posts, setPosts] = useState(SAMPLE_POSTS);
   const flatListRef = useRef<FlatList>(null);
+  const router = useRouter();
 
   const viewabilityConfig = useRef({
     itemVisiblePercentThreshold: 50
@@ -346,6 +348,20 @@ export default function HomeScreen() {
     );
   };
 
+  const handleFollow = (postId: string) => {
+    setPosts(currentPosts => 
+      currentPosts.map(post => {
+        if (post.id === postId) {
+          return {
+            ...post,
+            isFollowed: true
+          };
+        }
+        return post;
+      })
+    );
+  };
+
   const renderItem = ({ item: post }) => (
     <View style={styles.postContainer}>
       <VideoPost image={post.image} />
@@ -353,25 +369,32 @@ export default function HomeScreen() {
         styles.actionsContainer,
         { bottom: 100 + insets.bottom }
       ]}>
-        <TouchableOpacity style={styles.actionButton}>
+        <TouchableOpacity 
+          style={styles.actionButton}
+        >
           <View style={styles.actionIconShadow}>
-            <View style={styles.profileImageContainer}>
+            <TouchableOpacity 
+              style={styles.profileImageContainer}
+              onPress={() => router.push(`/user/${post.user}`)}
+            >
               <Image 
-                source={{ uri: 'https://picsum.photos/200' }} // Placeholder image
+                source={{ uri: 'https://picsum.photos/200' }}
                 style={styles.profileImage}
               />
-            </View>
-            <View style={styles.plusIconContainer}>
-              <IconSymbol 
-                name="plus" 
-                size={12} 
-                color="#fff"
-              />
-            </View>
+            </TouchableOpacity>
+            {!post.isFollowed && (
+              <TouchableOpacity 
+                style={styles.plusIconContainer}
+                onPress={() => handleFollow(post.id)}
+              >
+                <IconSymbol 
+                  name="plus" 
+                  size={12} 
+                  color="#fff"
+                />
+              </TouchableOpacity>
+            )}
           </View>
-          <ThemedText style={[styles.actionText, styles.actionTextShadow]}>
-            Follow
-          </ThemedText>
         </TouchableOpacity>
 
         <LikeButton 
@@ -426,7 +449,9 @@ export default function HomeScreen() {
           bottom: insets.bottom
         }
       ]}>
-        <ThemedText style={styles.username}>{post.user}</ThemedText>
+        <TouchableOpacity onPress={() => router.push(`/user/${post.user}`)}>
+          <ThemedText style={styles.username}>{post.user}</ThemedText>
+        </TouchableOpacity>
         <ThemedText style={styles.description}>
           {post.description}
         </ThemedText>
