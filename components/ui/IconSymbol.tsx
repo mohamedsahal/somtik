@@ -25,6 +25,13 @@ const MAPPING = {
   'photo.fill': 'photo',
   'play.fill': 'play-arrow',
   'broadcast.fill': 'live-tv',
+  'person.2.fill': 'group',
+  'plus': 'add',
+  'bubble.right.fill': 'chat',
+  'bookmark.fill': 'bookmark',
+  'arrowshape.turn.up.right.fill': 'reply',
+  'comment': 'comment',
+  'xmark': 'close',
 } as const;
 
 export type IconSymbolName = keyof typeof MAPPING;

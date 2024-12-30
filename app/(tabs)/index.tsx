@@ -1,21 +1,404 @@
-import { StyleSheet, Dimensions, View, TouchableOpacity } from 'react-native';
+import { StyleSheet, Dimensions, View, TouchableOpacity, Animated, Easing, Image, FlatList } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import { ThemedText } from '@/components/ThemedText';
 import { IconSymbol } from '@/components/ui/IconSymbol';
-import { useState } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { CommentsModal, Comment } from '@/components/CommentsModal';
 
 const { height, width } = Dimensions.get('window');
 
+type Comment = {
+  id: string;
+  username: string;
+  text: string;
+  likes: number;
+  timestamp: string;
+  isLiked: boolean;
+};
+
+const SAMPLE_POSTS = [
+  {
+    id: '1',
+    image: 'https://images.pexels.com/photos/2792116/pexels-photo-2792116.jpeg',
+    user: '@username',
+    description: 'Check out this amazing video! 🎉 #trending #viral',
+    likes: 123400,
+    comments: [
+      {
+        id: '1',
+        username: '@user1',
+        text: 'This is amazing! 🔥',
+        likes: 42,
+        timestamp: '2h ago',
+        isLiked: false
+      },
+      // Add more sample comments...
+    ],
+    music: 'Original Sound - Username',
+    liked: false,
+    favorited: false
+  },
+  {
+    id: '2',
+    image: 'https://images.pexels.com/photos/2387873/pexels-photo-2387873.jpeg',
+    user: '@user2',
+    description: 'Another cool video 🔥 #fun #viral',
+    likes: 89100,
+    comments: '912',
+    music: 'Popular Song - Artist',
+    liked: false,
+    favorited: false
+  }
+];
+
+function MusicDisc() {
+  const spinValue = useRef(new Animated.Value(0)).current;
+  const spinAnimation = useRef<Animated.CompositeAnimation | null>(null);
+
+  useEffect(() => {
+    // Create the animation
+    spinAnimation.current = Animated.loop(
+      Animated.timing(spinValue, {
+        toValue: 1,
+        duration: 3000,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      })
+    );
+
+    // Start the animation
+    spinAnimation.current.start();
+
+    // Cleanup function
+    return () => {
+      if (spinAnimation.current) {
+        spinAnimation.current.stop();
+      }
+    };
+  }, []); // Empty dependency array means this only runs once on mount
+
+  const rotate = spinValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
+
+  return (
+    <View style={styles.actionButton}>
+      <Animated.View 
+        style={[
+          styles.musicDisc,
+          { transform: [{ rotate }] }
+        ]}
+      >
+        <View style={styles.musicDiscInner}>
+          <View style={styles.musicDiscImage} />
+          <IconSymbol 
+            name="music.note"
+            size={12}
+            color="#fff"
+          />
+        </View>
+      </Animated.View>
+    </View>
+  );
+}
+
+function FlippedIcon({ name, size, color }: { name: IconSymbolName; size: number; color: string }) {
+  return (
+    <View style={{ transform: [{ scaleX: -1 }] }}>
+      <IconSymbol 
+        name={name}
+        size={size}
+        color={color}
+      />
+    </View>
+  );
+}
+
+function VideoPost({ image }: { image: string }) {
+  return (
+    <View style={styles.video}>
+      <Image 
+        source={{ uri: image }}
+        style={styles.videoBackground}
+        resizeMode="cover"
+      />
+    </View>
+  );
+}
+
+function TopNavIcon({ name }: { name: IconSymbolName }) {
+  return (
+    <View style={styles.topNavIcon}>
+      <IconSymbol name={name} size={24} color="#fff" style={styles.shadowedIcon} />
+    </View>
+  );
+}
+
+function LikeButton({ liked, likes, onPress }: { 
+  liked: boolean; 
+  likes: number;
+  onPress: () => void;
+}) {
+  const scale = useRef(new Animated.Value(1)).current;
+
+  const animateScale = () => {
+    Animated.sequence([
+      Animated.timing(scale, {
+        toValue: 1.2,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+      Animated.timing(scale, {
+        toValue: 1,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
+  const handlePress = () => {
+    animateScale();
+    onPress();
+  };
+
+  return (
+    <TouchableOpacity 
+      style={styles.actionButton}
+      onPress={handlePress}
+    >
+      <Animated.View style={[
+        styles.actionIconShadow,
+        { transform: [{ scale }] }
+      ]}>
+        <IconSymbol 
+          name="heart.fill"
+          size={35}
+          color={liked ? '#ff2d55' : '#fff'}
+        />
+      </Animated.View>
+      <ThemedText style={[styles.actionText, styles.actionTextShadow]}>
+        {likes >= 1000 
+          ? `${(likes/1000).toFixed(1)}K`
+          : likes.toString()
+        }
+      </ThemedText>
+    </TouchableOpacity>
+  );
+}
+
+function FavoriteButton({ favorited, onPress }: { 
+  favorited: boolean;
+  onPress: () => void;
+}) {
+  const scale = useRef(new Animated.Value(1)).current;
+
+  const animateScale = () => {
+    Animated.sequence([
+      Animated.timing(scale, {
+        toValue: 1.2,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+      Animated.timing(scale, {
+        toValue: 1,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
+  const handlePress = () => {
+    animateScale();
+    onPress();
+  };
+
+  return (
+    <TouchableOpacity 
+      style={styles.actionButton}
+      onPress={handlePress}
+    >
+      <Animated.View style={[
+        styles.actionIconShadow,
+        { transform: [{ scale }] }
+      ]}>
+        <IconSymbol 
+          name="bookmark.fill"
+          size={35}
+          color={favorited ? '#ff2d55' : '#fff'}
+        />
+      </Animated.View>
+      <ThemedText style={[styles.actionText, styles.actionTextShadow]}>
+        Save
+      </ThemedText>
+    </TouchableOpacity>
+  );
+}
+
 export default function HomeScreen() {
   const [activeTab, setActiveTab] = useState('for-you');
+  const [posts, setPosts] = useState(SAMPLE_POSTS);
+  const flatListRef = useRef<FlatList>(null);
+
+  const viewabilityConfig = useRef({
+    itemVisiblePercentThreshold: 50
+  }).current;
+
+  const onViewableItemsChanged = useRef(({ viewableItems }) => {
+    console.log('Viewable items:', viewableItems);
+  }).current;
+
+  const [commentModalVisible, setCommentModalVisible] = useState(false);
+  const [activePostId, setActivePostId] = useState<string | null>(null);
+
+  const handleLike = (postId: string) => {
+    setPosts(currentPosts => 
+      currentPosts.map(post => {
+        if (post.id === postId) {
+          return {
+            ...post,
+            liked: !post.liked,
+            likes: post.liked ? post.likes - 1 : post.likes + 1
+          };
+        }
+        return post;
+      })
+    );
+  };
+
+  const handleCommentPress = (postId: string) => {
+    setActivePostId(postId);
+    setCommentModalVisible(true);
+  };
+
+  const handleAddComment = (text: string) => {
+    if (!activePostId) return;
+
+    setPosts(currentPosts => 
+      currentPosts.map(post => {
+        if (post.id === activePostId) {
+          const newComment: Comment = {
+            id: Date.now().toString(),
+            username: '@currentuser', // Replace with actual user
+            text,
+            likes: 0,
+            timestamp: 'Just now',
+            isLiked: false
+          };
+          return {
+            ...post,
+            comments: [newComment, ...post.comments]
+          };
+        }
+        return post;
+      })
+    );
+  };
+
+  const handleCommentLike = (commentId: string) => {
+    setPosts(currentPosts => 
+      currentPosts.map(post => ({
+        ...post,
+        comments: post.comments.map(comment => {
+          if (comment.id === commentId) {
+            return {
+              ...comment,
+              isLiked: !comment.isLiked,
+              likes: comment.isLiked ? comment.likes - 1 : comment.likes + 1
+            };
+          }
+          return comment;
+        })
+      }))
+    );
+  };
+
+  const handleFavorite = (postId: string) => {
+    setPosts(currentPosts => 
+      currentPosts.map(post => {
+        if (post.id === postId) {
+          return {
+            ...post,
+            favorited: !post.favorited
+          };
+        }
+        return post;
+      })
+    );
+  };
+
+  const renderItem = ({ item: post }) => (
+    <View style={styles.postContainer}>
+      <VideoPost image={post.image} />
+      {/* Right Side Actions */}
+      <View style={styles.actionsContainer}>
+        <LikeButton 
+          liked={post.liked}
+          likes={post.likes}
+          onPress={() => handleLike(post.id)}
+        />
+        
+        <TouchableOpacity 
+          style={styles.actionButton}
+          onPress={() => handleCommentPress(post.id)}
+        >
+          <IconSymbol 
+            name="comment"
+            size={35}
+            color="#fff"
+            style={styles.actionIconShadow}
+          />
+          <ThemedText style={[styles.actionText, styles.actionTextShadow]}>
+            {post.comments.length}
+          </ThemedText>
+        </TouchableOpacity>
+
+        <FavoriteButton 
+          favorited={post.favorited}
+          onPress={() => handleFavorite(post.id)}
+        />
+        
+        <View style={styles.actionButton}>
+          <View style={styles.actionIconShadow}>
+            <FlippedIcon 
+              name="arrowshape.turn.up.right.fill"
+              size={35}
+              color="#fff"
+            />
+          </View>
+          <ThemedText style={[styles.actionText, styles.actionTextShadow]}>
+            Share
+          </ThemedText>
+        </View>
+
+        <MusicDisc />
+      </View>
+
+      {/* Bottom Info */}
+      <View style={styles.infoContainer}>
+        <ThemedText style={styles.username}>{post.user}</ThemedText>
+        <ThemedText style={styles.description}>
+          {post.description}
+        </ThemedText>
+        <View style={styles.musicContainer}>
+          <IconSymbol 
+            name="music.note"
+            size={15}
+            color="#fff"
+          />
+          <ThemedText style={styles.musicText}>
+            {post.music}
+          </ThemedText>
+        </View>
+      </View>
+    </View>
+  );
 
   return (
     <View style={styles.container}>
       {/* Top Navigation Bar */}
       <View style={styles.topNav}>
-        <TouchableOpacity style={styles.topNavIcon}>
-          <IconSymbol name="broadcast.fill" size={24} color="#fff" />
-        </TouchableOpacity>
+        <TopNavIcon name="broadcast.fill" />
 
         <View style={styles.tabs}>
           <TouchableOpacity 
@@ -24,7 +407,7 @@ export default function HomeScreen() {
           >
             <ThemedText style={[
               styles.tabText,
-              activeTab === 'following' && styles.activeTabText
+              activeTab === 'following' && [styles.activeTabText, styles.shadowedText]
             ]}>
               Following
             </ThemedText>
@@ -37,7 +420,7 @@ export default function HomeScreen() {
           >
             <ThemedText style={[
               styles.tabText,
-              activeTab === 'for-you' && styles.activeTabText
+              activeTab === 'for-you' && [styles.activeTabText, styles.shadowedText]
             ]}>
               For You
             </ThemedText>
@@ -45,118 +428,35 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity style={styles.topNavIcon}>
-          <IconSymbol name="magnifyingglass" size={24} color="#fff" />
-        </TouchableOpacity>
+        <TopNavIcon name="magnifyingglass" />
       </View>
 
-      {/* Existing ScrollView Content */}
-      <ScrollView pagingEnabled style={styles.content}>
-        {/* Video Post 1 */}
-        <View style={styles.postContainer}>
-          <View style={[styles.video, { backgroundColor: '#333' }]} />
-          
-          {/* Right Side Actions */}
-          <View style={styles.actionsContainer}>
-            <View style={styles.actionButton}>
-              <IconSymbol 
-                name="heart.fill"
-                size={35}
-                color="#fff"
-              />
-              <ThemedText style={styles.actionText}>123.4K</ThemedText>
-            </View>
-            
-            <View style={styles.actionButton}>
-              <IconSymbol 
-                name="message.fill"
-                size={35}
-                color="#fff"
-              />
-              <ThemedText style={styles.actionText}>1,234</ThemedText>
-            </View>
-            
-            <View style={styles.actionButton}>
-              <IconSymbol 
-                name="square.and.arrow.up.fill"
-                size={35}
-                color="#fff"
-              />
-              <ThemedText style={styles.actionText}>Share</ThemedText>
-            </View>
-          </View>
+      <FlatList
+        ref={flatListRef}
+        data={posts}
+        renderItem={renderItem}
+        keyExtractor={(item) => item.id}
+        pagingEnabled
+        showsVerticalScrollIndicator={false}
+        snapToInterval={height}
+        snapToAlignment="start"
+        decelerationRate="fast"
+        viewabilityConfig={viewabilityConfig}
+        onViewableItemsChanged={onViewableItemsChanged}
+        initialNumToRender={2}
+        maxToRenderPerBatch={3}
+        windowSize={3}
+        removeClippedSubviews={true}
+        style={styles.content}
+      />
 
-          {/* Bottom Info */}
-          <View style={styles.infoContainer}>
-            <ThemedText style={styles.username}>@username</ThemedText>
-            <ThemedText style={styles.description}>
-              Check out this amazing video! 🎉 #trending #viral
-            </ThemedText>
-            <View style={styles.musicContainer}>
-              <IconSymbol 
-                name="music.note"
-                size={15}
-                color="#fff"
-              />
-              <ThemedText style={styles.musicText}>
-                Original Sound - Username
-              </ThemedText>
-            </View>
-          </View>
-        </View>
-
-        {/* Video Post 2 - Similar structure */}
-        <View style={styles.postContainer}>
-          <View style={[styles.video, { backgroundColor: '#444' }]} />
-          {/* Right Side Actions */}
-          <View style={styles.actionsContainer}>
-            <View style={styles.actionButton}>
-              <IconSymbol 
-                name="heart.fill"
-                size={35}
-                color="#fff"
-              />
-              <ThemedText style={styles.actionText}>89.1K</ThemedText>
-            </View>
-            
-            <View style={styles.actionButton}>
-              <IconSymbol 
-                name="message.fill"
-                size={35}
-                color="#fff"
-              />
-              <ThemedText style={styles.actionText}>912</ThemedText>
-            </View>
-            
-            <View style={styles.actionButton}>
-              <IconSymbol 
-                name="square.and.arrow.up.fill"
-                size={35}
-                color="#fff"
-              />
-              <ThemedText style={styles.actionText}>Share</ThemedText>
-            </View>
-          </View>
-
-          {/* Bottom Info */}
-          <View style={styles.infoContainer}>
-            <ThemedText style={styles.username}>@user2</ThemedText>
-            <ThemedText style={styles.description}>
-              Another cool video 🔥 #fun #viral
-            </ThemedText>
-            <View style={styles.musicContainer}>
-              <IconSymbol 
-                name="music.note"
-                size={15}
-                color="#fff"
-              />
-              <ThemedText style={styles.musicText}>
-                Popular Song - Artist
-              </ThemedText>
-            </View>
-          </View>
-        </View>
-      </ScrollView>
+      <CommentsModal
+        visible={commentModalVisible}
+        onClose={() => setCommentModalVisible(false)}
+        comments={activePostId ? posts.find(p => p.id === activePostId)?.comments || [] : []}
+        onAddComment={handleAddComment}
+        onLikeComment={handleCommentLike}
+      />
     </View>
   );
 }
@@ -190,6 +490,8 @@ const styles = StyleSheet.create({
   },
   tab: {
     alignItems: 'center',
+    paddingHorizontal: 2,
+    position: 'relative',
   },
   tabText: {
     color: '#888',
@@ -204,19 +506,34 @@ const styles = StyleSheet.create({
   activeIndicator: {
     position: 'absolute',
     bottom: -2,
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    width: 20,
+    height: 2,
     backgroundColor: '#fff',
+    alignSelf: 'center',
+    left: '50%',
+    marginLeft: -10,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.5,
+    shadowRadius: 2,
+    elevation: 3,
   },
   content: {
     flex: 1,
+    backgroundColor: '#000',
   },
   postContainer: {
     height,
     width,
   },
   video: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#000',
+  },
+  videoBackground: {
     ...StyleSheet.absoluteFillObject,
   },
   actionsContainer: {
@@ -261,5 +578,66 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 14,
     marginLeft: 8,
+  },
+  musicDisc: {
+    width: 45,
+    height: 45,
+    borderRadius: 22.5,
+    backgroundColor: '#333',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 8,
+    borderColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  musicDiscInner: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 17.5,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#666',
+  },
+  musicDiscImage: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#444',
+  },
+  shadowedIcon: {
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
+  shadowedText: {
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
+  actionShadow: {
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  actionIconShadow: {
+    textShadowColor: 'rgba(0, 0, 0, 0.35)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
+  actionTextShadow: {
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
 });
