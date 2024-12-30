@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { ThemedText } from './ThemedText';
 import { IconSymbol } from './ui/IconSymbol';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export type Comment = {
   id: string;
@@ -31,6 +32,7 @@ type CommentsModalProps = {
 
 export function CommentsModal({ visible, onClose, comments, onAddComment, onLikeComment }: CommentsModalProps) {
   const [newComment, setNewComment] = React.useState('');
+  const insets = useSafeAreaInsets();
 
   const handleSubmit = () => {
     if (newComment.trim()) {
@@ -75,10 +77,22 @@ export function CommentsModal({ visible, onClose, comments, onAddComment, onLike
       onRequestClose={onClose}
     >
       <View style={styles.modalContainer}>
-        <View style={styles.modalContent}>
-          <View style={styles.header}>
+        <View style={[
+          styles.modalContent,
+          { paddingBottom: insets.bottom }
+        ]}>
+          <View style={[
+            styles.header,
+            { paddingTop: 15 + insets.top }
+          ]}>
             <ThemedText style={styles.title}>Comments</ThemedText>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+            <TouchableOpacity 
+              onPress={onClose} 
+              style={[
+                styles.closeButton,
+                { top: 15 + insets.top }
+              ]}
+            >
               <IconSymbol name="xmark" size={24} color="#fff" />
             </TouchableOpacity>
           </View>
@@ -92,6 +106,7 @@ export function CommentsModal({ visible, onClose, comments, onAddComment, onLike
 
           <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={insets.bottom}
             style={styles.inputContainer}
           >
             <TextInput
@@ -104,15 +119,17 @@ export function CommentsModal({ visible, onClose, comments, onAddComment, onLike
             />
             <TouchableOpacity 
               onPress={handleSubmit}
-              style={styles.postButton}
+              style={[
+                styles.postButton,
+                !newComment.trim() && styles.postButtonDisabled
+              ]}
               disabled={!newComment.trim()}
             >
-              <ThemedText style={[
-                styles.postButtonText,
-                !newComment.trim() && styles.postButtonDisabled
-              ]}>
-                Post
-              </ThemedText>
+              <IconSymbol 
+                name="paperplane.fill" 
+                size={24} 
+                color={!newComment.trim() ? '#666' : '#ff2d55'} 
+              />
             </TouchableOpacity>
           </KeyboardAvoidingView>
         </View>
@@ -211,14 +228,13 @@ const styles = StyleSheet.create({
     maxHeight: 100,
   },
   postButton: {
-    paddingHorizontal: 15,
-  },
-  postButtonText: {
-    color: '#ff2d55',
-    fontWeight: 'bold',
+    padding: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8,
   },
   postButtonDisabled: {
-    color: '#666',
+    opacity: 0.7,
   },
   likedCount: {
     color: '#ff2d55',

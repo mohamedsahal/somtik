@@ -4,6 +4,8 @@ import { ThemedText } from '@/components/ThemedText';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { CommentsModal, Comment } from '@/components/CommentsModal';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons, FontAwesome5, MaterialIcons } from '@expo/vector-icons';
 
 const { height, width } = Dimensions.get('window');
 
@@ -167,16 +169,15 @@ function LikeButton({ liked, likes, onPress }: {
       style={styles.actionButton}
       onPress={handlePress}
     >
-      <Animated.View style={[
-        styles.actionIconShadow,
-        { transform: [{ scale }] }
-      ]}>
-        <IconSymbol 
-          name="heart.fill"
-          size={35}
-          color={liked ? '#ff2d55' : '#fff'}
-        />
-      </Animated.View>
+      <View style={styles.actionIconShadow}>
+        <Animated.View style={{ transform: [{ scale }] }}>
+          <IconSymbol 
+            name="heart.fill"
+            size={35}
+            color={liked ? '#ff2d55' : '#fff'}
+          />
+        </Animated.View>
+      </View>
       <ThemedText style={[styles.actionText, styles.actionTextShadow]}>
         {likes >= 1000 
           ? `${(likes/1000).toFixed(1)}K`
@@ -218,16 +219,15 @@ function FavoriteButton({ favorited, onPress }: {
       style={styles.actionButton}
       onPress={handlePress}
     >
-      <Animated.View style={[
-        styles.actionIconShadow,
-        { transform: [{ scale }] }
-      ]}>
-        <IconSymbol 
-          name="bookmark.fill"
-          size={35}
-          color={favorited ? '#ff2d55' : '#fff'}
-        />
-      </Animated.View>
+      <View style={styles.actionIconShadow}>
+        <Animated.View style={{ transform: [{ scale }] }}>
+          <IconSymbol 
+            name="bookmark.fill"
+            size={35}
+            color={favorited ? '#ff2d55' : '#fff'}
+          />
+        </Animated.View>
+      </View>
       <ThemedText style={[styles.actionText, styles.actionTextShadow]}>
         Save
       </ThemedText>
@@ -236,6 +236,7 @@ function FavoriteButton({ favorited, onPress }: {
 }
 
 export default function HomeScreen() {
+  const insets = useSafeAreaInsets();
   const [activeTab, setActiveTab] = useState('for-you');
   const [posts, setPosts] = useState(SAMPLE_POSTS);
   const flatListRef = useRef<FlatList>(null);
@@ -330,8 +331,31 @@ export default function HomeScreen() {
   const renderItem = ({ item: post }) => (
     <View style={styles.postContainer}>
       <VideoPost image={post.image} />
-      {/* Right Side Actions */}
-      <View style={styles.actionsContainer}>
+      <View style={[
+        styles.actionsContainer,
+        { bottom: 100 + insets.bottom }
+      ]}>
+        <TouchableOpacity style={styles.actionButton}>
+          <View style={styles.actionIconShadow}>
+            <View style={styles.profileImageContainer}>
+              <Image 
+                source={{ uri: 'https://picsum.photos/200' }} // Placeholder image
+                style={styles.profileImage}
+              />
+            </View>
+            <View style={styles.plusIconContainer}>
+              <IconSymbol 
+                name="plus" 
+                size={12} 
+                color="#fff"
+              />
+            </View>
+          </View>
+          <ThemedText style={[styles.actionText, styles.actionTextShadow]}>
+            Follow
+          </ThemedText>
+        </TouchableOpacity>
+
         <LikeButton 
           liked={post.liked}
           likes={post.likes}
@@ -342,12 +366,13 @@ export default function HomeScreen() {
           style={styles.actionButton}
           onPress={() => handleCommentPress(post.id)}
         >
-          <IconSymbol 
-            name="comment"
-            size={35}
-            color="#fff"
-            style={styles.actionIconShadow}
-          />
+          <View style={styles.actionIconShadow}>
+            <IconSymbol 
+              name="message.fill"
+              size={35}
+              color="#fff"
+            />
+          </View>
           <ThemedText style={[styles.actionText, styles.actionTextShadow]}>
             {post.comments.length}
           </ThemedText>
@@ -358,29 +383,39 @@ export default function HomeScreen() {
           onPress={() => handleFavorite(post.id)}
         />
         
-        <View style={styles.actionButton}>
+        <TouchableOpacity style={styles.actionButton}>
           <View style={styles.actionIconShadow}>
-            <FlippedIcon 
-              name="arrowshape.turn.up.right.fill"
-              size={35}
-              color="#fff"
-            />
+            <View>
+              <IconSymbol 
+                name="arrowshape.turn.up.right.fill"
+                size={35}
+                color="#fff"
+              />
+            </View>
           </View>
           <ThemedText style={[styles.actionText, styles.actionTextShadow]}>
             Share
           </ThemedText>
-        </View>
+        </TouchableOpacity>
 
         <MusicDisc />
       </View>
 
-      {/* Bottom Info */}
-      <View style={styles.infoContainer}>
+      <View style={[
+        styles.infoContainer,
+        { 
+          paddingBottom: 32 + insets.bottom,
+          bottom: insets.bottom
+        }
+      ]}>
         <ThemedText style={styles.username}>{post.user}</ThemedText>
         <ThemedText style={styles.description}>
           {post.description}
         </ThemedText>
-        <View style={styles.musicContainer}>
+        <View style={[
+          styles.musicContainer,
+          { marginBottom: insets.bottom }
+        ]}>
           <IconSymbol 
             name="music.note"
             size={15}
@@ -396,9 +431,16 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Top Navigation Bar */}
-      <View style={styles.topNav}>
-        <TopNavIcon name="broadcast.fill" />
+      <View style={[
+        styles.topNav, 
+        { 
+          paddingTop: insets.top,
+          height: 44 + insets.top 
+        }
+      ]}>
+        <TouchableOpacity style={styles.searchButton}>
+          <MaterialIcons name="live-tv" size={24} color="#fff" />
+        </TouchableOpacity>
 
         <View style={styles.tabs}>
           <TouchableOpacity 
@@ -428,7 +470,9 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
 
-        <TopNavIcon name="magnifyingglass" />
+        <TouchableOpacity style={styles.searchButton}>
+          <IconSymbol name="magnifyingglass" size={24} color="#fff" />
+        </TouchableOpacity>
       </View>
 
       <FlatList
@@ -447,6 +491,7 @@ export default function HomeScreen() {
         maxToRenderPerBatch={3}
         windowSize={3}
         removeClippedSubviews={true}
+        contentContainerStyle={{ paddingBottom: insets.bottom }}
         style={styles.content}
       />
 
@@ -469,9 +514,8 @@ const styles = StyleSheet.create({
   topNav: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     paddingHorizontal: 16,
-    height: 44,
     position: 'absolute',
     top: 0,
     left: 0,
@@ -539,8 +583,8 @@ const styles = StyleSheet.create({
   actionsContainer: {
     position: 'absolute',
     right: 8,
-    bottom: 100,
     alignItems: 'center',
+    paddingBottom: 16,
   },
   actionButton: {
     alignItems: 'center',
@@ -549,11 +593,10 @@ const styles = StyleSheet.create({
   actionText: {
     color: '#fff',
     fontSize: 12,
-    marginTop: 4,
+    marginTop: 6,
   },
   infoContainer: {
     position: 'absolute',
-    bottom: 0,
     left: 0,
     right: 0,
     padding: 16,
@@ -591,11 +634,11 @@ const styles = StyleSheet.create({
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 1,
+      height: 2,
     },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    elevation: 2,
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+    elevation: 5,
   },
   musicDiscInner: {
     width: '100%',
@@ -631,13 +674,44 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   actionIconShadow: {
-    textShadowColor: 'rgba(0, 0, 0, 0.35)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+    elevation: 5,
   },
   actionTextShadow: {
     textShadowColor: 'rgba(0, 0, 0, 0.5)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
+  },
+  profileImageContainer: {
+    width: 45,
+    height: 45,
+    borderRadius: 22.5,
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: '#fff',
+  },
+  profileImage: {
+    width: '100%',
+    height: '100%',
+  },
+  plusIconContainer: {
+    position: 'absolute',
+    bottom: -4,
+    alignSelf: 'center',
+    backgroundColor: '#ff2d55',
+    borderRadius: 10,
+    width: 20,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  searchButton: {
+    padding: 8,
   },
 });

@@ -4,6 +4,8 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { SymbolWeight } from 'expo-symbols';
 import React from 'react';
 import { OpaqueColorValue, StyleProp, ViewStyle } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 // Add your SFSymbol to MaterialIcons mappings here.
 const MAPPING = {
@@ -32,6 +34,11 @@ const MAPPING = {
   'arrowshape.turn.up.right.fill': 'reply',
   'comment': 'comment',
   'xmark': 'close',
+  'line.3.horizontal': 'menu',
+  'grid': 'grid-on',
+  'lock': 'lock',
+  'chat.bubble.fill': 'chat-bubble-outline',
+  'dot.radiowaves.left.and.right': 'wifi-tethering',
 } as const;
 
 export type IconSymbolName = keyof typeof MAPPING;
