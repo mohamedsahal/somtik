@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { ThemedText } from './ThemedText';
 import { IconSymbol } from './ui/IconSymbol';
+import { useAuth } from '@/contexts/AuthContext';
 
 const { width } = Dimensions.get('window');
 
@@ -32,15 +33,17 @@ type ProfileData = {
 };
 
 export function UserProfileMenu() {
+  const { session } = useAuth();
+  const user = session?.user;
   const [activeTab, setActiveTab] = React.useState('posted');
   
   const profileData: ProfileData = {
-    username: '@username',
-    avatar: 'https://picsum.photos/200',
-    bio: 'Welcome to my profile! 👋',
-    followers: '10.5K',
-    following: '1.2K',
-    likes: '100K',
+    username: user?.user_metadata?.username || user?.email?.split('@')[0] || '@user',
+    avatar: user?.user_metadata?.avatar_url || 'https://picsum.photos/200',
+    bio: user?.user_metadata?.bio || 'Welcome to my profile! 👋',
+    followers: '0',
+    following: '0',
+    likes: '0',
     postedVideos: [
       { id: '1', thumbnail: 'https://picsum.photos/300/400', views: '1.2K' },
       // Add more videos...
