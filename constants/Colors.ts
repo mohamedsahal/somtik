@@ -6,6 +6,12 @@
 const tintColorLight = '#246EE9';
 const tintColorDark = '#246EE9';
 
+export const BRAND = {
+  primary: '#246EE9', // Royal blue color
+  secondary: '#1a1a1a',
+  accent: '#ff2d55',
+};
+
 export default {
   light: {
     text: '#000000',
