@@ -1,11 +1,11 @@
 import { View, StyleSheet, TouchableOpacity, ScrollView, Image, Dimensions } from 'react-native';
+import { useLocalSearchParams } from 'expo-router';
 import { ThemedText } from '@/components/ThemedText';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import { IconSymbol } from '@/components/ui/IconSymbol';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { useLocalSearchParams, router } from 'expo-router';
-import { useAuth } from '@/contexts/AuthContext';
+import { BRAND } from '@/constants/Colors';
 
 const { width } = Dimensions.get('window');
 const ITEM_WIDTH = width / 3;
@@ -16,7 +16,7 @@ export default function UserProfileScreen() {
   const [profile, setProfile] = useState<any>(null);
   const [activeTab, setActiveTab] = useState('posts');
   const { id } = useLocalSearchParams();
-  const { session } = useAuth();
+  const [isFollowing, setIsFollowing] = useState(false);
 
   useEffect(() => {
     fetchProfile();
@@ -37,55 +37,112 @@ export default function UserProfileScreen() {
     }
   };
 
-  if (!session) {
-    return (
-      <View style={[styles.container, { paddingTop: insets.top }]}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color="#fff" />
-          </TouchableOpacity>
-          <ThemedText style={styles.username}>Profile</ThemedText>
-          <View style={{ width: 24 }} />
-        </View>
+  const toggleFollow = () => {
+    setIsFollowing(!isFollowing);
+    // Add your follow/unfollow logic here
+  };
 
-        <View style={styles.authPrompt}>
-          <ThemedText style={styles.promptTitle}>Join Somtik</ThemedText>
-          <ThemedText style={styles.promptText}>
-            Sign up to follow creators, like videos, and view comments.
+  return (
+    <View style={[styles.container]}>
+      <ScrollView>
+        {/* Profile Info */}
+        <View style={styles.profileInfo}>
+          <Image 
+            source={{ uri: profile?.avatar_url || 'https://via.placeholder.com/96' }}
+            style={styles.avatar}
+          />
+          <ThemedText style={styles.username}>
+            {profile?.username || '@username'}
           </ThemedText>
-          
-          <TouchableOpacity 
-            style={styles.signUpButton}
-            onPress={() => router.push('/auth/signup')}
-          >
-            <ThemedText style={styles.signUpButtonText}>Sign up</ThemedText>
-          </TouchableOpacity>
 
-          <View style={styles.loginPrompt}>
-            <ThemedText style={styles.loginText}>Already have an account?</ThemedText>
-            <TouchableOpacity onPress={() => router.push('/auth/login')}>
-              <ThemedText style={styles.loginLink}>Log in</ThemedText>
+          {/* Stats */}
+          <View style={styles.stats}>
+            <View style={styles.statItem}>
+              <ThemedText style={styles.statValue}>
+                {profile?.following || 0}
+              </ThemedText>
+              <ThemedText style={styles.statLabel}>Following</ThemedText>
+            </View>
+            <View style={styles.statItem}>
+              <ThemedText style={styles.statValue}>
+                {profile?.followers || 0}
+              </ThemedText>
+              <ThemedText style={styles.statLabel}>Followers</ThemedText>
+            </View>
+            <View style={styles.statItem}>
+              <ThemedText style={styles.statValue}>
+                {profile?.likes || 0}
+              </ThemedText>
+              <ThemedText style={styles.statLabel}>Likes</ThemedText>
+            </View>
+          </View>
+
+          {/* Bio */}
+          <ThemedText style={styles.bio}>
+            {profile?.bio || 'No bio yet'}
+          </ThemedText>
+
+          {/* Action Buttons */}
+          <View style={styles.actionButtons}>
+            <TouchableOpacity 
+              style={[
+                styles.followButton,
+                isFollowing && styles.followingButton
+              ]}
+              onPress={toggleFollow}
+            >
+              <ThemedText style={[
+                styles.followButtonText,
+                isFollowing && styles.followingButtonText
+              ]}>
+                {isFollowing ? 'Following' : 'Follow'}
+              </ThemedText>
             </TouchableOpacity>
           </View>
         </View>
-      </View>
-    );
-  }
 
-  return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color="#fff" />
-        </TouchableOpacity>
-        <ThemedText style={styles.username}>{profile?.username || 'Username'}</ThemedText>
-        <TouchableOpacity>
-          <Ionicons name="ellipsis-horizontal" size={24} color="#fff" />
-        </TouchableOpacity>
-      </View>
+        {/* Tabs */}
+        <View style={styles.tabs}>
+          <TouchableOpacity 
+            style={[styles.tab, activeTab === 'posts' && styles.activeTab]}
+            onPress={() => setActiveTab('posts')}
+          >
+            <IconSymbol 
+              name="square.grid.2x2" 
+              size={24} 
+              color={activeTab === 'posts' ? '#fff' : '#888'} 
+            />
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.tab, activeTab === 'liked' && styles.activeTab]}
+            onPress={() => setActiveTab('liked')}
+          >
+            <IconSymbol 
+              name="heart" 
+              size={24} 
+              color={activeTab === 'liked' ? '#fff' : '#888'} 
+            />
+          </TouchableOpacity>
+        </View>
 
-      {/* Rest of your profile UI code... */}
+        {/* Posts Grid */}
+        <View style={styles.postsGrid}>
+          {Array.from({ length: 12 }).map((_, index) => (
+            <View key={index} style={styles.postItem}>
+              <Image
+                source={{ uri: `https://picsum.photos/300/450?random=${index}` }}
+                style={styles.postThumbnail}
+              />
+              <View style={styles.viewsOverlay}>
+                <IconSymbol name="play.fill" size={12} color="#fff" />
+                <ThemedText style={styles.viewsText}>
+                  {Math.floor(Math.random() * 1000)}K
+                </ThemedText>
+              </View>
+            </View>
+          ))}
+        </View>
+      </ScrollView>
     </View>
   );
 }
@@ -94,23 +151,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#000',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    height: 44,
-  },
-  backButton: {
-    padding: 8,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    gap: 16,
-  },
-  headerButton: {
-    padding: 8,
   },
   profileInfo: {
     alignItems: 'center',
@@ -149,13 +189,14 @@ const styles = StyleSheet.create({
     color: '#fff',
     textAlign: 'center',
     marginBottom: 16,
+    paddingHorizontal: 32,
   },
   actionButtons: {
     flexDirection: 'row',
     gap: 8,
   },
   followButton: {
-    backgroundColor: '#ff2d55',
+    backgroundColor: BRAND.primary,
     paddingHorizontal: 48,
     paddingVertical: 12,
     borderRadius: 4,
@@ -172,11 +213,6 @@ const styles = StyleSheet.create({
   followingButtonText: {
     color: '#888',
   },
-  messageButton: {
-    backgroundColor: '#333',
-    padding: 12,
-    borderRadius: 4,
-  },
   tabs: {
     flexDirection: 'row',
     borderTopWidth: StyleSheet.hairlineWidth,
@@ -192,6 +228,10 @@ const styles = StyleSheet.create({
   },
   activeTab: {
     borderBottomColor: '#fff',
+  },
+  postsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
   },
   postItem: {
     width: ITEM_WIDTH,
@@ -217,51 +257,5 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0, 0, 0, 0.5)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
-  },
-  authPrompt: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 32,
-  },
-  promptTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  promptText: {
-    fontSize: 16,
-    color: '#888',
-    textAlign: 'center',
-    marginBottom: 32,
-  },
-  signUpButton: {
-    backgroundColor: '#246EE9', // Your brand color
-    paddingVertical: 14,
-    paddingHorizontal: 48,
-    borderRadius: 4,
-    width: '100%',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  signUpButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  loginPrompt: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  loginText: {
-    color: '#888',
-    fontSize: 14,
-  },
-  loginLink: {
-    color: '#246EE9', // Your brand color
-    fontSize: 14,
-    fontWeight: '600',
   },
 }); 

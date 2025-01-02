@@ -33,6 +33,8 @@ export default function TabLayout() {
           fontSize: 10,
           marginTop: -4,
         },
+        animation: 'fade',
+        animationDuration: 200,
       }}>
       <Tabs.Screen
         name="index"

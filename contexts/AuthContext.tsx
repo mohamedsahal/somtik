@@ -11,6 +11,7 @@ type TempCredentials = {
 
 type AuthContextType = {
   session: Session | null;
+  user: any;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, username: string) => Promise<void>;
@@ -27,11 +28,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [currentEmail, setCurrentEmail] = useState<string | null>(null);
   const [tempCredentials, setTempCredentials] = useState<TempCredentials>(null);
+  const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
+      setUser(session?.user ?? null);
       setLoading(false);
+
+      if (session?.user) {
+        router.replace('/(tabs)/profile');
+      } else {
+        router.replace('/auth/login');
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -154,20 +169,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { error, data } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      if (error) {
-        // Only log actual errors, not authentication failures
-        if (error.message !== 'Invalid login credentials') {
-          console.error('Error signing in:', error);
-        }
-        throw error;
+      if (error) throw error;
+
+      // Successfully signed in
+      if (data.session) {
+        router.replace('/(tabs)/profile');
       }
-      router.replace('/(tabs)');
-    } catch (error) {
+    } catch (error: any) {
       throw error;
     }
   };
@@ -204,6 +217,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   return (
     <AuthContext.Provider value={{ 
       session, 
+      user,
       loading, 
       signIn, 
       signUp, 

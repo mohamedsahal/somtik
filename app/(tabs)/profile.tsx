@@ -3,11 +3,12 @@ import { ThemedText } from '@/components/ThemedText';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { router } from 'expo-router';
+import { useProfile } from '@/contexts/ProfileContext';
 
 const { width } = Dimensions.get('window');
 const THUMBNAIL_WIDTH = width / 3;
@@ -29,18 +30,15 @@ const BRAND = {
 export default function ProfileScreen() {
   const { session, signOut } = useAuth();
   const insets = useSafeAreaInsets();
-  const [profile, setProfile] = useState<any>(null);
   const [posts, setPosts] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState('posts');
   const scrollY = useRef(new Animated.Value(0)).current;
   const [menuVisible, setMenuVisible] = useState(false);
+  const [shouldRefresh, setShouldRefresh] = useState(false);
+  
+  const { profile, setProfile, updateProfile } = useProfile();
 
-  // Header animation
-  const headerOpacity = scrollY.interpolate({
-    inputRange: [0, 100],
-    outputRange: [0, 1],
-    extrapolate: 'clamp',
-  });
+  console.log('Current profile data:', profile);
 
   useEffect(() => {
     if (session?.user) {
@@ -49,33 +47,53 @@ export default function ProfileScreen() {
     }
   }, [session]);
 
+  useEffect(() => {
+    if (shouldRefresh) {
+      fetchMyProfile();
+      setShouldRefresh(false);
+    }
+  }, [shouldRefresh]);
+
   const fetchMyProfile = async () => {
     if (!session?.user?.id) return;
     
     try {
-      const { data, error } = await supabase
+      let { data, error } = await supabase
         .from('profiles')
-        .select(`
-          id,
-          username,
-          full_name,
-          avatar_url,
-          bio,
-          followers:follower_following!follower_id(count),
-          following:follower_following!following_id(count),
-          total_likes:posts(sum(likes_count))
-        `)
+        .select('*')
         .eq('id', session.user.id)
         .single();
 
-      if (error) throw error;
+      console.log('Fetched profile data:', data);
 
-      setProfile({
-        ...data,
-        followers: data.followers?.[0]?.count || 0,
-        following: data.following?.[0]?.count || 0,
-        total_likes: data.total_likes?.[0]?.sum || 0
-      });
+      if (error && error.code === 'PGRST116') {
+        const newProfile = {
+          id: session.user.id,
+          username: session.user.email?.split('@')[0] || '',
+          full_name: '',
+          bio: '',
+          avatar_url: '',
+          followers_count: 0,
+          following_count: 0,
+          likes_count: 0,
+          updated_at: new Date().toISOString(),
+        };
+
+        const { data: createdProfile, error: createError } = await supabase
+          .from('profiles')
+          .insert([newProfile])
+          .select()
+          .single();
+
+        if (createError) throw createError;
+        data = createdProfile;
+      } else if (error) {
+        throw error;
+      }
+
+      if (data) {
+        setProfile(data);
+      }
     } catch (error) {
       console.error('Error fetching profile:', error);
     }
@@ -95,7 +113,8 @@ export default function ProfileScreen() {
           created_at,
           views_count,
           likes_count,
-          comments_count
+          comments_count,
+          is_private
         `)
         .eq('user_id', session.user.id)
         .order('created_at', { ascending: false });
@@ -116,6 +135,29 @@ export default function ProfileScreen() {
       console.error('Error logging out:', error);
     }
   };
+
+  const handleEditProfile = async () => {
+    if (session?.user) {
+      await router.push('/edit-profile');
+      setShouldRefresh(true);
+    }
+  };
+
+  useEffect(() => {
+    const unsubscribe = () => {
+      if (shouldRefresh) {
+        fetchMyProfile();
+        setShouldRefresh(false);
+      }
+    };
+
+    unsubscribe();
+    return unsubscribe;
+  }, [shouldRefresh]);
+
+  useEffect(() => {
+    console.log('Profile updated:', profile);
+  }, [profile]);
 
   if (!session) {
     return (
@@ -156,6 +198,13 @@ export default function ProfileScreen() {
     );
   }
 
+  // Header animation
+  const headerOpacity = scrollY.interpolate({
+    inputRange: [0, 100],
+    outputRange: [0, 1],
+    extrapolate: 'clamp',
+  });
+
   // Return your existing profile UI for logged-in users
   return (
     <View style={styles.container}>
@@ -167,9 +216,7 @@ export default function ProfileScreen() {
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top }]}>
         <View style={styles.headerLeft}>
-          <ThemedText style={styles.username}>
-            {profile?.username || session?.user?.email?.split('@')[0] || 'Profile'}
-          </ThemedText>
+          {/* Remove the ThemedText component with username */}
         </View>
         <TouchableOpacity onPress={() => setMenuVisible(true)}>
           <Ionicons name="menu-outline" size={28} color="#fff" />
@@ -186,43 +233,62 @@ export default function ProfileScreen() {
       >
         {/* Profile Info */}
         <View style={styles.profileInfo}>
-          <Image
-            source={{ 
-              uri: profile?.avatar_url || 
-                'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y' 
-            }}
-            style={styles.avatar}
-          />
+          {/* Avatar */}
+          <View style={styles.avatarContainer}>
+            <Image
+              source={{ 
+                uri: profile?.avatar_url || 
+                  'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y' 
+              }}
+              style={styles.avatar}
+            />
+          </View>
           
-          <ThemedText style={styles.name}>{profile?.full_name || ''}</ThemedText>
-          <ThemedText style={styles.handle}>@{profile?.username || session?.user?.email?.split('@')[0] || ''}</ThemedText>
+          {/* Name and Username */}
+          <ThemedText style={styles.name}>
+            {profile?.full_name || 'Add your name'}
+          </ThemedText>
+          <ThemedText style={styles.handle}>
+            @{profile?.username || session?.user?.email?.split('@')[0] || ''}
+          </ThemedText>
           
+          {/* Stats */}
           <View style={styles.stats}>
-            <TouchableOpacity style={styles.statItem}>
-              <ThemedText style={styles.statNumber}>{profile?.following || 0}</ThemedText>
+            <View style={styles.statItem}>
+              <ThemedText style={styles.statNumber}>
+                {profile?.following_count || 0}
+              </ThemedText>
               <ThemedText style={styles.statLabel}>Following</ThemedText>
-            </TouchableOpacity>
+            </View>
             
-            <TouchableOpacity style={styles.statItem}>
-              <ThemedText style={styles.statNumber}>{profile?.followers || 0}</ThemedText>
+            <View style={styles.statItem}>
+              <ThemedText style={styles.statNumber}>
+                {profile?.followers_count || 0}
+              </ThemedText>
               <ThemedText style={styles.statLabel}>Followers</ThemedText>
-            </TouchableOpacity>
+            </View>
             
-            <TouchableOpacity style={styles.statItem}>
-              <ThemedText style={styles.statNumber}>{profile?.total_likes || 0}</ThemedText>
+            <View style={styles.statItem}>
+              <ThemedText style={styles.statNumber}>
+                {profile?.likes_count || 0}
+              </ThemedText>
               <ThemedText style={styles.statLabel}>Likes</ThemedText>
-            </TouchableOpacity>
+            </View>
           </View>
 
+          {/* Bio */}
           <View style={styles.bioSection}>
-            <ThemedText style={styles.bioText}>{profile?.bio || 'Tap to add bio'}</ThemedText>
+            <ThemedText style={styles.bioText}>
+              {profile?.bio || 'Tap to add bio'}
+            </ThemedText>
           </View>
 
+          {/* Edit Button */}
           <TouchableOpacity 
             style={styles.editButton}
-            onPress={() => router.push('/settings/edit-profile')}
+            onPress={handleEditProfile}
           >
-            <ThemedText style={styles.editButtonText}>Edit profile</ThemedText>
+            <ThemedText style={styles.editButtonText}>Edit Profile</ThemedText>
           </TouchableOpacity>
         </View>
 
@@ -348,7 +414,7 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -356,7 +422,6 @@ const styles = StyleSheet.create({
   },
   headerLeft: {
     flex: 1,
-    alignItems: 'center',
   },
   username: {
     fontSize: 17,
@@ -366,11 +431,10 @@ const styles = StyleSheet.create({
   profileInfo: {
     alignItems: 'center',
     paddingTop: 20,
+    paddingHorizontal: 16,
   },
   avatarContainer: {
-    width: 96,
-    height: 96,
-    marginBottom: 12,
+    marginBottom: 16,
   },
   avatar: {
     width: 96,
@@ -388,17 +452,22 @@ const styles = StyleSheet.create({
     borderRadius: 50,
     zIndex: -1,
   },
+  name: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 4,
+  },
   handle: {
     fontSize: 14,
     color: '#888',
-    marginBottom: 20,
+    marginBottom: 16,
   },
   stats: {
     flexDirection: 'row',
     justifyContent: 'center',
     width: '100%',
-    paddingHorizontal: 30,
-    marginBottom: 20,
+    marginBottom: 16,
   },
   statItem: {
     alignItems: 'center',
@@ -407,14 +476,15 @@ const styles = StyleSheet.create({
   statNumber: {
     fontSize: 17,
     fontWeight: '600',
+    color: '#fff',
   },
   statLabel: {
     fontSize: 13,
     color: '#888',
-    marginTop: 3,
+    marginTop: 4,
   },
   bioSection: {
-    paddingHorizontal: 16,
+    width: '100%',
     alignItems: 'center',
     marginBottom: 16,
   },

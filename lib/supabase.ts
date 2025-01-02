@@ -6,36 +6,46 @@ import { Platform } from 'react-native';
 const supabaseUrl = 'https://kmkdgedmcgsxexlzydtu.supabase.co';
 const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtta2RnZWRtY2dzeGV4bHp5ZHR1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzU2MzgxNzMsImV4cCI6MjA1MTIxNDE3M30.ev6feUSO8m98KqxE7OiZZQZjQfjtAKUdcvqa5mXuYBA';
 
-const storage = Platform.OS === 'web' 
-  ? localStorage 
-  : {
-      setItem: async (key: string, value: string) => {
-        try {
-          await AsyncStorage.setItem(key, value);
-        } catch (error) {
-          console.error('Error storing value:', error);
-        }
-      },
-      getItem: async (key: string) => {
-        try {
-          return await AsyncStorage.getItem(key);
-        } catch (error) {
-          console.error('Error retrieving value:', error);
-          return null;
-        }
-      },
-      removeItem: async (key: string) => {
-        try {
-          await AsyncStorage.removeItem(key);
-        } catch (error) {
-          console.error('Error removing value:', error);
-        }
-      },
-    };
+// Create a custom storage object that works for both web and native
+const customStorage = {
+  setItem: async (key: string, value: string) => {
+    try {
+      if (Platform.OS === 'web') {
+        window.localStorage.setItem(key, value);
+      } else {
+        await AsyncStorage.setItem(key, value);
+      }
+    } catch (error) {
+      console.error('Error storing value:', error);
+    }
+  },
+  getItem: async (key: string) => {
+    try {
+      if (Platform.OS === 'web') {
+        return window.localStorage.getItem(key);
+      }
+      return await AsyncStorage.getItem(key);
+    } catch (error) {
+      console.error('Error retrieving value:', error);
+      return null;
+    }
+  },
+  removeItem: async (key: string) => {
+    try {
+      if (Platform.OS === 'web') {
+        window.localStorage.removeItem(key);
+      } else {
+        await AsyncStorage.removeItem(key);
+      }
+    } catch (error) {
+      console.error('Error removing value:', error);
+    }
+  },
+};
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    storage,
+    storage: customStorage,
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,
